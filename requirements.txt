@@ -1,0 +1,8 @@
+langchain-openai~=0.2.6
+langchain-core~=0.3.15
+python-dotenv~=1.0.1
+langchain-anthropic>=0.3.6
+pydantic~=2.9.2
+json-repair~=0.35.0
+
+
