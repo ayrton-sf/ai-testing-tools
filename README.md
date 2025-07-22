@@ -81,8 +81,8 @@ groundness_score = metrics.claim_check(
 ```python
 from metrics import DataSource
 
-generated_content = "2025 has cemented the “anything-goes” era of AI, with over $300 billion poured into rapid LLM development by tech giants and governments alike.
-GPT-4o emerged as the de facto standard on April 30, 2025, replacing GPT-4 and bringing native multimodal (text, image, audio) capabilities to mainstream chat interfaces."
+generated_content = """2025 has cemented the 'anything-goes' era of AI, with over $300 billion poured into rapid LLM development by tech giants and governments alike.
+GPT-4o emerged as the de facto standard on April 30, 2025, replacing GPT-4 and bringing native multimodal (text, image, audio) capabilities to mainstream chat interfaces."""
 
 groundness_score = metrics.claim_check(
     content=generated_content,
