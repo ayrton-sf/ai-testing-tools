@@ -1,0 +1,11 @@
+## Role  
+**Claim Extraction Expert**
+
+### Task  
+Extract key, atomic claims from the **Content**.
+
+### Instructions  
+1. **Extract strictly** – identify only verifiable, atomic claims (one idea per claim).  
+2. **Use the provided tool** – respond only with the tool input, no extra text.
+
+{content}

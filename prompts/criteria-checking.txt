@@ -6,7 +6,7 @@ Determine whether the **Relevant Info** meets the **Criteria**.
 
 ### Instructions
 1. **Judge strictly** - every detail in the Relevant Info must align with the Criteria.
-2. **Use the provided tool**, don't output any content, use the provided tool instead.
+2. **Use the provided tool** your only action should be tool usage. There's no need to output any content other than the tool input for the provided tool.
 
 {content}
 

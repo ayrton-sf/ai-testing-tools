@@ -1,10 +1,24 @@
-from typing import Dict, List, Union
-from llm.llm_service import LLMService
+from typing import Dict, List, Optional, Union
+from .llm.llm_service import LLMService
+from src.claim_checking.web_checker import WebChecker
+from src.data_sources import DataSource
+from src.llm.models import Model
 
 
 class Metrics:
-    def __init__(self):
-        self.llm_service = LLMService()
+    def __init__(self, model: str, api_key: str):
+        if not model or not model.strip():
+            raise ValueError("`model` must be a non‐empty string")
+        if not api_key or not api_key.strip():
+            raise ValueError("`api_key` must be a non‐empty string")
+
+        try:
+            self.model = Model(model)
+        except ValueError:
+            raise ValueError(f"Invalid model: {model}")
+
+        self.api_key = api_key.strip()
+        self.llm_service = LLMService(api_key=self.api_key, model=self.model)
 
     def criteria_eval(
         self, content: str, criteria: List[str]
@@ -27,3 +41,23 @@ class Metrics:
                 for i in range(len(criteria))
             ],
         }
+
+    def claim_check(
+        self, content: Optional[str], data_source: DataSource, urls: Optional[List[str]]
+    ) -> List[Dict[str, Union[str, bool]]]:
+        claims = self.llm_service.extract_claims(content)
+
+        checker_factory = {DataSource.WEB: lambda: WebChecker(self.llm_service)}
+
+        checker = checker_factory[data_source]()
+
+        call_args = {}
+
+        if data_source == DataSource.WEB and urls is not None:
+            call_args["urls"] = urls
+
+        reference = checker.fetch_reference(**call_args)
+        print(len(reference), "references fetched")
+        chunked_reference = checker.chunk_content(reference)
+        print(len(chunked_reference), "chunks created")
+        return checker.check_claims(claims=claims, content_chunks=chunked_reference)

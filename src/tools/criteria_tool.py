@@ -1,8 +1,7 @@
 from typing import Any, Dict, Optional, Type
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel
-import json_repair
-from tools.criteria_tool_input import CriteriaToolInput
+from .criteria_tool_input import CriteriaToolInput
 
 
 class CriteriaEvalTool(BaseTool):
@@ -10,22 +9,22 @@ class CriteriaEvalTool(BaseTool):
     description: str = "Evaluate content based on criteria."
     args_schema: Type[BaseModel] = CriteriaToolInput
 
-    def _run(self, tool_input: CriteriaToolInput) -> bool:
+    def _run(self, result: bool) -> bool:
         try:
-            return tool_input.result
+            return result
         except Exception as e:
             print(f"Error creating files: {e}")
             raise
 
-    async def _arun(self, result: CriteriaToolInput) -> bool:
+    async def _arun(self, result: bool) -> bool:
         return self._run(result)
 
     def _parse_input(
-        self, tool_input: str | Dict, tool_call_id: Optional[str] = None
+        self, result: str | bool, tool_call_id: Optional[str] = None
     ) -> Dict[str, Any]:
-        if isinstance(tool_input, str):
-            fixed_tool_input = json_repair.loads(tool_input)
+        if isinstance(result, str):
+            fixed_tool_input = bool(result)
         else:
-            fixed_tool_input = tool_input
+            fixed_tool_input = result
 
         return fixed_tool_input
