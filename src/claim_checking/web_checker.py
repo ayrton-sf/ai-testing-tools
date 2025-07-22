@@ -40,12 +40,6 @@ class WebChecker(ClaimChecker):
                 break
 
             updated = self.llm_service.verify_claims(pending, chunk)
-            print("updated claims:", updated)
-            print("type of updated claims:", type(updated))
-            print(
-                "verified claims:",
-                [claim for claim in updated if claim.get("validity")],
-            )
 
             for claim in updated:
                 for existing_claim in all_claims:

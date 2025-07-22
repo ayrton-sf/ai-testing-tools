@@ -57,7 +57,7 @@ class Metrics:
             call_args["urls"] = urls
 
         reference = checker.fetch_reference(**call_args)
-        print(len(reference), "references fetched")
+
         chunked_reference = checker.chunk_content(reference)
-        print(len(chunked_reference), "chunks created")
+
         return checker.check_claims(claims=claims, content_chunks=chunked_reference)
