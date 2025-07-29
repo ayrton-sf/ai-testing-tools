@@ -8,3 +8,6 @@ PyPDF2
 beautifulsoup4
 requests
 html5lib
+mcp[cli]
+langchain-mcp-adapters
+langgraph

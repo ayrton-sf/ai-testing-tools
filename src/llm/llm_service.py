@@ -1,20 +1,29 @@
+import asyncio
+from enum import Enum, auto
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.tools import BaseTool
 from langchain_core.prompts import ChatPromptTemplate
+import pydantic
 from src.tools.claim_check_tool import ClaimCheckTool
 from src.tools.claim_extraction_tool import ClaimExtractionTool
 from ..tools.criteria_tool import CriteriaEvalTool
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
-import pydantic
+from pydantic import BaseModel
 from typing import Any, Dict, List, Optional, Union
 from .models import Model, Provider
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
+from langchain_mcp_adapters.tools import load_mcp_tools
+from langgraph.prebuilt import create_react_agent
+from langgraph.checkpoint.memory import MemorySaver
 
 
 class PromptConfig:
     GENERAL_CRITERIA_EVAL = "./prompts/criteria-checking.txt"
     CLAIM_EXTRACTION = "./prompts/claim-extraction.txt"
     CLAIM_CHECK = "./prompts/claim-checking.txt"
+    SQL_MCP = "./prompts/sql-mcp.txt"
 
 
 class LLMService:
@@ -99,6 +108,36 @@ class LLMService:
         except Exception as e:
             print(f"Chain creation error: {e}")
             raise
+
+    async def _async_make_mcp_chain(
+        self,
+        server_params: StdioServerParameters,
+        input: str,
+        prompt: PromptConfig,
+    ):
+        async with stdio_client(server_params) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+
+                tools = await load_mcp_tools(session)
+                memory = MemorySaver()
+
+                agent = create_react_agent(
+                    model=self._select_language_model(),
+                    tools=tools,
+                    checkpointer=memory,
+                    prompt=prompt,
+                )
+
+                response = await agent.ainvoke({"messages": [("user", input)]})
+                return response["structured_response"]
+
+    async def run_mcp_sql_agent(self, input: str, server: StdioServerParameters) -> str:
+        return await self._async_make_mcp_chain(
+            server,
+            input,
+            PromptConfig.SQL_MCP,
+        )
 
     def evaluate_criterion(self, criterion: str, content: str) -> bool:
         prompt = PromptConfig.GENERAL_CRITERIA_EVAL

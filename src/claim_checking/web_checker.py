@@ -10,7 +10,6 @@ from src.llm.llm_service import LLMService
 
 class WebChecker(ClaimChecker):
     def __init__(self, llm_service: LLMService):
-        super().__init__()
         self.MAX_CHUNK_CHARS = 4000
         self.llm_service = llm_service
 
