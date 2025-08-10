@@ -1,5 +1,4 @@
 from typing import Dict, List, Optional, Union
-
 from src.claim_checking.sql_checker import SQLChecker
 from .llm.llm_service import LLMService
 from src.claim_checking.web_checker import WebChecker
@@ -44,12 +43,13 @@ class Metrics:
             ],
         }
 
-    def claim_check(
+    async def claim_check(
         self,
         content: Optional[str],
         data_source: DataSource,
         db_string: Optional[str] = None,
         urls: Optional[List[str]] = None,
+        query_url: Optional[str] = None,
     ) -> List[Dict[str, Union[str, bool]]]:
         claims = self.llm_service.extract_claims(content)
 
@@ -69,17 +69,29 @@ class Metrics:
 
         call_args = {}
 
-        required_args = data_source.required_args + ["content"]
+        if data_source == DataSource.SQL:
+            call_args["claims"] = claims
+
+        required_args = data_source.required_args
 
         for arg in required_args:
             call_args[arg] = locals().get(arg)
 
-        return checker.fetch_reference(**call_args)
-
-        """
-        reference = checker.fetch_reference(**call_args)
+        reference = await checker.fetch_reference(**call_args)
 
         chunked_reference = checker.chunk_content(reference)
 
-        return checker.check_claims(claims=claims, content_chunks=chunked_reference)
-        """
+        claim_check_result = checker.check_claims(claims=claims, content_chunks=chunked_reference)
+
+        score = 0
+
+        for claim in claim_check_result:
+            if claim["validity"]:
+                score += 1
+
+        score = (score / len(claim_check_result)) * 100
+
+        return {
+            "score": score,
+            "claims": claim_check_result,
+        }

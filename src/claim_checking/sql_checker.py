@@ -8,31 +8,16 @@ class SQLChecker(ClaimChecker):
     def __init__(self, llm_service: LLMService):
         self.llm_service = llm_service
 
-    async def fetch_reference(self, content: str, db_string: str) -> List[str]:
-        query_result = await self.llm_service.run_mcp_sql_agent(
-            input=content, server=get_postgres_mcp(db_string)
-        )
-        return query_result
+    async def fetch_reference(self, claims: List[str], db_string: str) -> List[str]:
+        reference = []
+        for claim in claims:
+            relevant_content = await self.llm_service.run_mcp_sql_agent(
+                input=claim, server=get_postgres_mcp(db_string)
+            )
+            if relevant_content:
+                reference.append(relevant_content)
 
-    def check_claims(
-        self, claims: List[Dict[str, str]], content_chunks: List[str]
-    ) -> List[Dict[str, Union[str, bool]]]:
-        all_claims = [{"claim": claim, "validity": False} for claim in claims]
+        return reference
 
-        for chunk in content_chunks:
-            pending = [claim for claim in all_claims if not claim["validity"]]
-            if not pending:
-                break
-
-            updated = self.llm_service.verify_claims(pending, chunk)
-
-            for claim in updated:
-                for existing_claim in all_claims:
-                    if existing_claim["claim"] == claim["claim"]:
-                        existing_claim["validity"] = claim["validity"]
-                        break
-
-        return all_claims
-
-    def chunk_content(self, content: List[str]) -> List[str]:
-        pass
+    def chunk_content(self, content: List[Dict]) -> List[Dict]:
+        return content

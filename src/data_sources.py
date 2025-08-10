@@ -6,6 +6,7 @@ from mcp import StdioServerParameters
 class DataSource(Enum):
     WEB = auto()
     SQL = auto()
+    VECTOR = auto()
 
     @property
     def required_args(self):

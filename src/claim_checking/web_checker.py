@@ -28,26 +28,6 @@ class WebChecker(ClaimChecker):
 
         return texts
 
-    def check_claims(
-        self, claims: List[Dict[str, str]], content_chunks: List[str]
-    ) -> List[Dict[str, Union[str, bool]]]:
-        all_claims = [{"claim": claim, "validity": False} for claim in claims]
-
-        for chunk in content_chunks:
-            pending = [claim for claim in all_claims if not claim["validity"]]
-            if not pending:
-                break
-
-            updated = self.llm_service.verify_claims(pending, chunk)
-
-            for claim in updated:
-                for existing_claim in all_claims:
-                    if existing_claim["claim"] == claim["claim"]:
-                        existing_claim["validity"] = claim["validity"]
-                        break
-
-        return all_claims
-
     def chunk_content(self, content: List[str]) -> List[str]:
         all_chunks = []
         for piece in content:

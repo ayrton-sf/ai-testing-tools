@@ -1,11 +1,12 @@
-import asyncio
-from enum import Enum, auto
+import ast
+import uuid
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.tools import BaseTool
 from langchain_core.prompts import ChatPromptTemplate
 import pydantic
 from src.tools.claim_check_tool import ClaimCheckTool
 from src.tools.claim_extraction_tool import ClaimExtractionTool
+from src.tools.return_record_tool_input import ReturnRecordToolInput
 from ..tools.criteria_tool import CriteriaEvalTool
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
@@ -17,6 +18,7 @@ from mcp.client.stdio import stdio_client
 from langchain_mcp_adapters.tools import load_mcp_tools
 from langgraph.prebuilt import create_react_agent
 from langgraph.checkpoint.memory import MemorySaver
+from typing import List, Dict, Union
 
 
 class PromptConfig:
@@ -114,30 +116,48 @@ class LLMService:
         server_params: StdioServerParameters,
         input: str,
         prompt: PromptConfig,
-    ):
+        tools: Optional[List[BaseTool]] = None,
+        response_model: BaseModel = None,
+    ) -> BaseModel:
         async with stdio_client(server_params) as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
 
-                tools = await load_mcp_tools(session)
+                all_tools = await load_mcp_tools(session)
+                if tools:
+                    all_tools.extend(tools)
+
                 memory = MemorySaver()
 
                 agent = create_react_agent(
                     model=self._select_language_model(),
-                    tools=tools,
+                    tools=all_tools,
                     checkpointer=memory,
                     prompt=prompt,
+                    response_format=response_model,
+                )
+                thread_id = uuid.uuid4().hex
+
+                response = await agent.ainvoke(
+                    {"messages": [("user", input)]},
+                    config={"configurable": {"thread_id": thread_id}}
                 )
 
-                response = await agent.ainvoke({"messages": [("user", input)]})
-                return response["structured_response"]
+                return response["structured_response"].result
 
-    async def run_mcp_sql_agent(self, input: str, server: StdioServerParameters) -> str:
-        return await self._async_make_mcp_chain(
+    async def run_mcp_sql_agent(self, input: str, server: StdioServerParameters) -> ReturnRecordToolInput:
+        result = await self._async_make_mcp_chain(
             server,
             input,
-            PromptConfig.SQL_MCP,
+            self._load_prompt(PromptConfig.SQL_MCP),
+            response_model=ReturnRecordToolInput,
         )
+
+        if result and isinstance(result, str):
+            result = ast.literal_eval(result)     
+        
+        return result
+            
 
     def evaluate_criterion(self, criterion: str, content: str) -> bool:
         prompt = PromptConfig.GENERAL_CRITERIA_EVAL
