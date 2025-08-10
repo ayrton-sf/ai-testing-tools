@@ -103,6 +103,7 @@ from metrics import DataSource
 groundness_score = metrics.claim_check(
     content=assistant_response,
     source=DataSource.SQL
+    db_url="postgresql://postgres:password@localhost:1234/your_db"
 )
 ```
 
